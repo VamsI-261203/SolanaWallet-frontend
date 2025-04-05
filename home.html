@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="solana.css">
+    <title>Solana Token Manager</title>
+   
+</head>
+<body>
+    
+    <div class="container">
+        <div class="card0" id="walletCard">
+            <button id="connectButton">Connect Wallet</button>
+            <div id="walletInfo" style="display: none;">
+                <p>Connected: <span id="walletAddress"></span></p>
+                <p>SOL Balance: <span id="solBalance"></span></p>
+                <button id="disconnectButton">Disconnect</button>
+            </div>
+        </div>
+
+        <div class="card1">
+            <h2>Create Token</h2>
+            <form id="createTokenForm">
+                <input type="text" placeholder="Token Name" id="tokenName" required>
+                <input type="text" placeholder="Token Symbol" id="tokenSymbol" required>
+                <input type="number" placeholder="Decimals" id="tokenDecimals" value="9" required>
+                <button type="submit">Create Token</button>
+            </form>
+        </div>
+
+        <div class="card2">
+            <h2>Mint Tokens</h2>
+            <form id="mintTokenForm">
+                <select id="mintSelect"></select>
+                <input type="number" placeholder="Amount" id="mintAmount" required>
+                <button type="submit">Mint Tokens</button>
+            </form>
+        </div>
+
+        <div class="card3">
+            <h2>Send Tokens</h2>
+            <form id="sendTokenForm">
+                <select id="sendTokenSelect"></select>
+                <input type="text" placeholder="Recipient Address" id="recipientAddress" required>
+                <input type="number" placeholder="Amount" id="sendAmount" required>
+                <button type="submit">Send Tokens</button>
+            </form>
+        </div>
+
+        <div class="card4">
+            <h2>Transaction History</h2>
+            <div id="transactionList"></div>
+        </div>
+
+        <div id="toast" class="toast"></div>
+    </div>
+
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
+    <script src="https://unpkg.com/@solana/spl-token@latest/lib/index.iife.js"></script>
+    <script>
+        let connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('devnet'));
+        let wallet = null;
+        let tokens = JSON.parse(localStorage.getItem('tokens')) || {};
+
+        // Wallet Connection
+        document.getElementById('connectButton').addEventListener('click', async () => {
+            if (window.solana && window.solana.isPhantom) {
+                try {
+                    wallet = window.solana;
+                    await wallet.connect();
+                    updateWalletInfo();
+                    loadTokenOptions();
+                } catch (error) {
+                    showToast('Error connecting wallet: ' + error.message);
+                }
+            } else {
+                showToast('Phantom wallet not detected!');
+            }
+        });
+
+        // Disconnect Wallet
+        document.getElementById('disconnectButton').addEventListener('click', () => {
+            wallet.disconnect();
+            wallet = null;
+            document.getElementById('walletInfo').style.display = 'none';
+            document.getElementById('connectButton').style.display = 'block';
+        });
+
+        // Create Token Form
+        document.getElementById('createTokenForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('tokenName').value;
+            const symbol = document.getElementById('tokenSymbol').value;
+            const decimals = parseInt(document.getElementById('tokenDecimals').value);
+
+            try {
+                const mint = await createToken(name, symbol, decimals);
+                tokens[mint.toString()] = { name, symbol, decimals };
+                localStorage.setItem('tokens', JSON.stringify(tokens));
+                loadTokenOptions();
+                showToast('Token created successfully!');
+            } catch (error) {
+                showToast('Error creating token: ' + error.message);
+            }
+        });
+
+        // Mint Tokens
+        document.getElementById('mintTokenForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const mintAddress = document.getElementById('mintSelect').value;
+            const amount = document.getElementById('mintAmount').value;
+            
+            try {
+                await mintTokens(mintAddress, amount);
+                showToast('Tokens minted successfully!');
+            } catch (error) {
+                showToast('Error minting tokens: ' + error.message);
+            }
+        });
+
+        // Send Tokens
+        document.getElementById('sendTokenForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const mintAddress = document.getElementById('sendTokenSelect').value;
+            const recipient = document.getElementById('recipientAddress').value;
+            const amount = document.getElementById('sendAmount').value;
+            
+            try {
+                await sendTokens(mintAddress, recipient, amount);
+                showToast('Tokens sent successfully!');
+            } catch (error) {
+                showToast('Error sending tokens: ' + error.message);
+            }
+        });
+
+        async function createToken(name, symbol, decimals) {
+            const mint = solanaWeb3.Keypair.generate();
+            const lamports = await connection.getMinimumBalanceForRentExemption(
+                solanaSplToken.MintLayout.span
+            );
+
+            const transaction = new solanaWeb3.Transaction().add(
+                solanaWeb3.SystemProgram.createAccount({
+                    fromPubkey: wallet.publicKey,
+                    newAccountPubkey: mint.publicKey,
+                    space: solanaSplToken.MintLayout.span,
+                    lamports,
+                    programId: solanaSplToken.TOKEN_PROGRAM_ID,
+                }),
+                solanaSplToken.createInitializeMintInstruction(
+                    mint.publicKey,
+                    decimals,
+                    wallet.publicKey,
+                    null,
+                    solanaSplToken.TOKEN_PROGRAM_ID
+                )
+            );
+
+            const { blockhash } = await connection.getRecentBlockhash();
+            transaction.recentBlockhash = blockhash;
+            transaction.feePayer = wallet.publicKey;
+
+            const signed = await wallet.signTransaction(transaction);
+            await connection.sendRawTransaction(signed.serialize());
+            
+            return mint.publicKey;
+        }
+
+        async function mintTokens(mintAddress, amount) {
+            const mintPublicKey = new solanaWeb3.PublicKey(mintAddress);
+            const token = new solanaSplToken.Token(
+                connection,
+                mintPublicKey,
+                solanaSplToken.TOKEN_PROGRAM_ID,
+                wallet.publicKey
+            );
+
+            const associatedAccount = await token.getOrCreateAssociatedAccountInfo(
+                wallet.publicKey
+            );
+
+            await token.mintTo(
+                associatedAccount.address,
+                wallet.publicKey,
+                [],
+                amount * Math.pow(10, tokens[mintAddress].decimals)
+            );
+        }
+
+        function updateWalletInfo() {
+            document.getElementById('connectButton').style.display = 'none';
+            document.getElementById('walletInfo').style.display = 'block';
+            document.getElementById('walletAddress').textContent = 
+                wallet.publicKey.toString().slice(0, 15) + '...';
+            
+            connection.getBalance(wallet.publicKey).then(balance => {
+                document.getElementById('solBalance').textContent = 
+                    (balance / solanaWeb3.LAMPORTS_PER_SOL).toFixed(4);
+            });
+        }
+
+        function loadTokenOptions() {
+            const selectElements = document.querySelectorAll('select');
+            selectElements.forEach(select => {
+                select.innerHTML = Object.entries(tokens).map(([address, token]) =>
+                    `<option value="${address}">${token.name} (${token.symbol})</option>`
+                ).join('');
+            });
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.display = 'block';
+            setTimeout(() => toast.style.display = 'none', 3000);
+        }
+    </script>
+</body>
+</html>

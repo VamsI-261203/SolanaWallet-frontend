@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="sendtokens.css" />
+  <title>Send Tokens</title>
+  
+  <link rel="stylesheet" href="navigate.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+        
+          
+       
+        
+          
+            <nav class="navbar">
+              <div class="logo"><a href="#">Solana wallet</a></div>
+              <div class="nav-links">
+                <a href="navigate.html">Home</a>
+                <div class="dropdown">
+                  <a href="#" class="dropbtn">Services</a>
+                  <div class="dropdown-content">
+                    <a href="createtkn.html">Create Token</a>
+                    <a href="minttoken.html">Mint Token</a>
+                    <a href="sendtokens.html">Send Token</a>
+                  </div>
+                </div>
+                
+     
+  <div class="container">
+    <h2>Send Tokens</h2>
+    <form id="sendTokenForm">
+      <select id="sendTokenSelect"></select>
+      <input type="text" placeholder="Recipient Address" id="recipientAddress" required>
+      <input type="number" placeholder="Amount" id="sendAmount" required>
+      <button type="submit">Send Tokens</button>
+    </form>
+    <div id="toast" class="toast"></div>
+  </div>
+</body>
+<script src="send-token.js"></script>
+</html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="createtkn.css" />
+  <link rel="stylesheet" href="navigate.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap" rel="stylesheet">
+  <title>Create Token</title>
+</head>
+
+            
+           
+          
+ <body>
+            <nav class="navbar">
+              <div class="logo"><a href="#">Solana wallet</a></div>
+              <div class="nav-links">
+                <a href="navigate.html">Home</a>
+                <div class="dropdown">
+                  <a href="#" class="dropbtn">Services</a>
+                  <div class="dropdown-content">
+                    <a href="createtkn.html">Create Token</a>
+                    <a href="minttoken.html">Mint Token</a>
+                    <a href="sendtokens.html">Send Token</a>
+                  </div>
+                </div>
+                
+          
+
+  <div class="container">
+    <h2>Create Token</h2>
+    <form id="createTokenForm">
+      <input type="text" placeholder="Token Name" id="tokenName" required>
+      <input type="text" placeholder="Token Symbol" id="tokenSymbol" required>
+      <input type="number" placeholder="Decimals" id="tokenDecimals" value="9" required>
+      <button type="submit">Create Token</button>
+    </form>
+    <div id="toast" class="toast"></div>
+  </div>
+</body>
+<script src="create-token.js"></script>
+</html>
